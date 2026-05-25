@@ -12,19 +12,6 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        // 注册MewUI平台和渲染后端
-        // 跨平台：根据操作系统自动选择
-#if WINDOWS
-        Win32Platform.Register();
-        Direct2DBackend.Register();     // Windows推荐: Direct2D高性能渲染
-#elif LINUX
-        X11Platform.Register();
-        MewVGX11Backend.Register();     // Linux: MewVG + X11
-#elif MACOS
-        MacOSPlatform.Register();
-        MewVGMacOSBackend.Register();   // macOS: MewVG + Metal
-#else
-        // 自动检测或回退
         if (OperatingSystem.IsWindows())
         {
             Win32Platform.Register();
@@ -40,7 +27,6 @@ public static class Program
             MacOSPlatform.Register();
             MewVGMacOSBackend.Register();
         }
-#endif
 
         // 构建并运行主窗口
         var mainWindow = new MainWindow();
