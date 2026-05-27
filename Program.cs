@@ -33,11 +33,6 @@ var stopwatch = Stopwatch.StartNew();
 Startup();
 
 Window window = null!;
-IconSource icon;
-using (var rs = typeof(Program).Assembly.GetManifestResourceStream("Aprillz.MewUI.DBClient.appicon.ico")!)
-{
-    icon = IconSource.FromStream(rs);
-}
 
 // ── 应用状态 ─────────────────────────────────────────
 var isDarkMode          = new ObservableValue<bool>(true);
@@ -68,8 +63,7 @@ Application
             .StartCenterScreen()
             .OnBuild(w => w
                 .Ref(out window)
-                .Icon(icon)
-                .Title("MewDB - 数据库管理客户端")
+                .Title("Oracle Developer")
                 .Content(
                     new DockPanel()
                         .Children(
