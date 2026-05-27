@@ -3,8 +3,16 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>OracleClient</RootNamespace>
+    <AssemblyName>OracleClient</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
     <PublishAot>true</PublishAot>
     <TrimMode>full</TrimMode>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
