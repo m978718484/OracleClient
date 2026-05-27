@@ -12,6 +12,7 @@ public sealed class SqlEditorPanel
     private readonly ObservableValue<string> _sqlText = new("");
     private readonly ObservableValue<string> _resultStatus = new("Ready");
     private readonly ObservableValue<bool> _isExecuting = new(false);
+    private readonly ObservableValue<bool> _canExecute = new(false);
     private readonly ObservableValue<string> _outputText = new("");
 
     // 查询结果
@@ -22,6 +23,10 @@ public sealed class SqlEditorPanel
     public SqlEditorPanel(Services.OracleService service)
     {
         _service = service;
+        _service.ConnectionStateChanged += (connected) =>
+        {
+            _canExecute.Value = connected && !_isExecuting.Value;
+        };
     }
 
     public UIElement Build()
@@ -71,7 +76,7 @@ private UIElement CreateEditorToolBar()
                         new Button()
                             .Content("Execute")
                             .OnClick(OnExecute)
-                            .BindIsEnabled(_isExecuting)
+                            .BindIsEnabled(_canExecute)
                             .ToolTip("Execute SQL (F8)"),
 
                         new Button()
@@ -81,7 +86,7 @@ private UIElement CreateEditorToolBar()
                         new Button()
                             .Content("Explain")
                             .OnClick(() => OnExplainPlan())
-                            .BindIsEnabled(_isExecuting)
+                            .BindIsEnabled(_canExecute)
                             .ToolTip("Explain Plan"),
 
                         new Button()
@@ -173,6 +178,7 @@ private UIElement CreateEditorToolBar()
         if (string.IsNullOrWhiteSpace(sql)) return;
 
         _isExecuting.Value = true;
+        _canExecute.Value = false;
         _resultStatus.Value = "Executing...";
 
         try
@@ -221,6 +227,7 @@ private UIElement CreateEditorToolBar()
         finally
         {
             _isExecuting.Value = false;
+            _canExecute.Value = true;
         }
     }
 
@@ -228,21 +235,34 @@ private UIElement CreateEditorToolBar()
     {
         if (_resultsGrid == null || _columns.Count == 0) return;
 
-        // 创建文本行数据作为简单展示
+        // 将 ResultRow 转换为 string?[] 按列索引取值
         var displayRows = _rows.Select(r =>
-            string.Join(" | ", r.Values.Select(v => v?.ToString() ?? "NULL"))
+            _columns.Select((_, i) => i < r.Values.Length ? r.Values[i]?.ToString() ?? "(NULL)" : string.Empty)
+                    .ToArray()
         ).ToArray();
 
-        _resultsGrid.SetItemsSource(displayRows);
-
-        // 添加单列
-        _resultsGrid.AddColumns(
-            new GridViewColumn<string>
+        // 动态构建多列
+        var gridColumns = new List<GridViewColumn<string?[]>>();
+        for (int i = 0; i < _columns.Count; i++)
+        {
+            var colIndex = i;
+            var col = _columns[i];
+            gridColumns.Add(new GridViewColumn<string?[]>
             {
-                Header = "Results",
-                Width = 800,
-            }
-        );
+                Header = col.Name,
+                Width = col.Width,
+                CellTemplate = new DelegateTemplate<string?[]>(
+                    build: _ => new TextBlock().CenterVertical(),
+                    bind: (view, row, _, _) =>
+                    {
+                        var tb = (TextBlock)view;
+                        tb.Text = colIndex < row.Length ? row[colIndex] ?? "(NULL)" : string.Empty;
+                    })
+            });
+        }
+
+        _resultsGrid.SetColumns(gridColumns);
+        _resultsGrid.SetItemsSource(displayRows);
     }
 
     private void OnExplainPlan()

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
 
@@ -6,8 +8,12 @@ namespace OracleClient.UI;
 /// <summary>
 /// 连接对话框 - PL/SQL Developer风格的Oracle登录界面
 /// </summary>
-public sealed class ConnectionDialog
+public sealed partial class ConnectionDialog
 {
+    private const string ConfigFile = "connections.json";
+
+    private readonly Services.OracleService _service;
+    private Window? _window;
     private readonly ObservableValue<string> _name = new("Oracle Dev");
     private readonly ObservableValue<string> _host = new("localhost");
     private readonly ObservableValue<string> _port = new("1521");
@@ -17,18 +23,24 @@ public sealed class ConnectionDialog
     private readonly ObservableValue<string> _role = new("Normal");
     private readonly ObservableValue<bool> _useServiceName = new(true);
     private readonly ObservableValue<bool> _isConnecting = new(false);
+    private readonly ObservableValue<bool> _canClick = new(true);
     private readonly ObservableValue<string> _statusText = new("");
+    private readonly ObservableValue<bool> _hasStatus = new(false);
 
-    public Models.ConnectionInfo? Result { get; private set; }
+    public ConnectionDialog(Services.OracleService service)
+    {
+        _service = service;
+        LoadLastConnection();
+    }
 
     public Window Build()
     {
-        var window = new Window()
+        _window = new Window()
             .Fixed(480, 520)
             .Title("Oracle Developer - Connect")
             .OnBuild(w => w.Content(CreateContent()));
-        window.StartupLocation = WindowStartupLocation.CenterScreen;
-        return window;
+        _window.StartupLocation = WindowStartupLocation.CenterScreen;
+        return _window;
     }
 
     private Element CreateContent()
@@ -150,7 +162,7 @@ public sealed class ConnectionDialog
         return new Border()
             .Padding(8, 4)
             .CornerRadius(4)
-            .BindIsVisible(new ObservableValue<bool>(false))
+            .BindIsVisible(_hasStatus)
             .WithTheme((t, b) => b.Background(t.Palette.ContainerBackground))
             .Child(
                 new TextBlock()
@@ -174,19 +186,17 @@ public sealed class ConnectionDialog
                         new Button()
                             .Content("Test")
                             .OnClick(OnTestConnection)
-                            .BindIsEnabled(_isConnecting),
+                            .BindIsEnabled(_canClick),
                         new Button()
                             .Content("Connect")
                             .OnClick(OnConnect)
-                            .BindIsEnabled(_isConnecting)
+                            .BindIsEnabled(_canClick)
                     )
             );
     }
 
-    // Note: BindIsEnabled binds to a bool source. When _isConnecting is true (connecting),
-    // we want buttons DISABLED. But BindIsEnabled sets IsEnabled = source.Value.
-    // So we need inverted logic: use separate ObservableValue<bool> for "canClick"
-    private readonly ObservableValue<bool> _canClick = new(true);
+    // Note: BindIsEnabled binds to a bool source. _canClick is the inverse of _isConnecting.
+    // When connecting, _canClick=false disables buttons; when idle, _canClick=true enables them.
 
     private void OnTestConnection()
     {
@@ -201,29 +211,33 @@ public sealed class ConnectionDialog
     private async Task TestConnectionAsync()
     {
         _isConnecting.Value = true;
+        _canClick.Value = false;
+        _hasStatus.Value = true;
         _statusText.Value = "Testing connection...";
 
         var info = BuildConnectionInfo();
-        var service = new Services.OracleService();
-        var success = await service.TestConnectionAsync(info);
+        var success = await _service.TestConnectionAsync(info);
 
         _statusText.Value = success ? "Connection successful!" : "Connection failed!";
         _isConnecting.Value = false;
+        _canClick.Value = true;
     }
 
     private async Task ConnectAsync()
     {
         _isConnecting.Value = true;
+        _canClick.Value = false;
+        _hasStatus.Value = true;
         _statusText.Value = "Connecting...";
 
         var info = BuildConnectionInfo();
-        var service = new Services.OracleService();
-        var success = await service.ConnectAsync(info);
+        var success = await _service.ConnectAsync(info);
 
         if (success)
         {
-            Result = info;
+            SaveConnection(info);
             _statusText.Value = "Connected!";
+            _window?.Close();
         }
         else
         {
@@ -231,6 +245,7 @@ public sealed class ConnectionDialog
         }
 
         _isConnecting.Value = false;
+        _canClick.Value = true;
     }
 
     private Models.ConnectionInfo BuildConnectionInfo()
@@ -247,4 +262,68 @@ public sealed class ConnectionDialog
             Role = _role.Value
         };
     }
+
+    private void LoadLastConnection()
+    {
+        try
+        {
+            if (!File.Exists(ConfigFile)) return;
+            var json = File.ReadAllText(ConfigFile);
+            var saved = JsonSerializer.Deserialize(json, SavedConnectionContext.Default.SavedConnection);
+            if (saved == null) return;
+
+            _name.Value = saved.Name ?? "Oracle Dev";
+            _host.Value = saved.Host ?? "localhost";
+            _port.Value = saved.Port > 0 ? saved.Port.ToString() : "1521";
+            _serviceName.Value = saved.ServiceName ?? "ORCL";
+            _useServiceName.Value = saved.UseServiceName;
+            _username.Value = saved.Username ?? "";
+            _password.Value = saved.Password ?? "";
+            _role.Value = saved.Role ?? "Normal";
+        }
+        catch
+        {
+            // 文件损坏则忽略，使用默认值
+        }
+    }
+
+    private void SaveConnection(Models.ConnectionInfo info)
+    {
+        try
+        {
+            var saved = new SavedConnection
+            {
+                Name = info.Name,
+                Host = info.Host,
+                Port = info.Port,
+                ServiceName = info.ServiceName,
+                UseServiceName = info.UseServiceName,
+                Username = info.Username,
+                Password = info.Password,
+                Role = info.Role
+            };
+            var json = JsonSerializer.Serialize(saved, SavedConnectionContext.Default.SavedConnection);
+            File.WriteAllText(ConfigFile, json);
+        }
+        catch
+        {
+            // 保存失败不影响连接
+        }
+    }
+
+    private sealed class SavedConnection
+    {
+        public string? Name { get; set; }
+        public string? Host { get; set; }
+        public int Port { get; set; }
+        public string? ServiceName { get; set; }
+        public bool UseServiceName { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public string? Role { get; set; }
+    }
+
+    [JsonSerializable(typeof(SavedConnection))]
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    private sealed partial class SavedConnectionContext : JsonSerializerContext;
 }

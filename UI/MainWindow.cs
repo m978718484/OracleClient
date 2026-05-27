@@ -287,7 +287,7 @@ public sealed class MainWindow
 
     private void OnConnect()
     {
-        var dialog = new ConnectionDialog();
+        var dialog = new ConnectionDialog(_oracleService);
         var window = dialog.Build();
         window.Show();
 
@@ -302,6 +302,7 @@ public sealed class MainWindow
             {
                 _statusConnection.Value = "Connected";
                 _ = LoadDatabaseInfo();
+                _objectBrowser?.Refresh();
             }
             else
             {
@@ -328,7 +329,7 @@ public sealed class MainWindow
 
     private void OnRefreshAll()
     {
-        // 对象浏览器刷新
+        _objectBrowser?.Refresh();
     }
 
     private async Task LoadDatabaseInfo()
