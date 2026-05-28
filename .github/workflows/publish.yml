@@ -1,0 +1,63 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 创建 GitHub Release
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            suffix: .exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            suffix: ''
+          - os: macos-latest
+            rid: osx-arm64
+            suffix: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet restore
+      - run: dotnet build -c Release --no-restore
+      - run: dotnet publish -r ${{ matrix.rid }} -c Release --no-restore
+      - run: dotnet publish OracleWorker -r ${{ matrix.rid }} -c Release --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true
+      - shell: bash
+        run: |
+          cp OracleWorker/bin/Release/net9.0/${{ matrix.rid }}/publish/OracleWorker${{ matrix.suffix }} bin/Release/net9.0/${{ matrix.rid }}/publish/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OracleClient-${{ matrix.rid }}
+          path: bin/Release/net9.0/${{ matrix.rid }}/publish/
+
+  release:
+    needs: [build]
+    if: ${{ inputs.create_release }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Organize artifacts
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          for dir in OracleClient-*/; do
+            dir=${dir%/}
+            rid=${dir#OracleClient-}
+            find "$dir" -type f -exec cp {} "release-assets/OracleClient-${rid}$([[ $rid == win-* ]] && echo '.exe')" \;
+          done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

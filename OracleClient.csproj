@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>OracleClient</RootNamespace>
+    <AssemblyName>OracleClient</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <PublishAot>true</PublishAot>
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aprillz.MewUI" Version="0.15.1" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.5.0" />
+  </ItemGroup>
+
+</Project>
