@@ -1,0 +1,2572 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MewDB - 数据库管理客户端</title>
+<style>
+/* ========== CSS Custom Properties (Theme System) ========== */
+:root {
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  --font-sans: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --radius: 4px;
+  --transition-speed: 0.2s;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1d23;
+  --bg-secondary: #252830;
+  --bg-tertiary: #2d3039;
+  --bg-elevated: #323640;
+  --bg-hover: #3a3f4b;
+  --bg-active: #434854;
+  --bg-input: #1e2028;
+  --bg-editor: #1e1e2e;
+  --bg-menu: #2a2d36;
+  --bg-modal-overlay: rgba(0,0,0,0.6);
+  --border-primary: #3a3f4b;
+  --border-secondary: #2e323c;
+  --border-focus: #4a7cff;
+  --text-primary: #e0e0e0;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-inverse: #1a1d23;
+  --accent: #4a7cff;
+  --accent-hover: #5a8cff;
+  --accent-active: #3a6cef;
+  --accent-bg: rgba(74,124,255,0.12);
+  --success: #22c55e;
+  --success-bg: rgba(34,197,94,0.12);
+  --warning: #eab308;
+  --warning-bg: rgba(234,179,8,0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239,68,68,0.12);
+  --null-text: #6b7280;
+  --row-alt: rgba(255,255,255,0.02);
+  --row-modified: rgba(234,179,8,0.08);
+  --row-new: rgba(34,197,94,0.08);
+  --scrollbar-track: #252830;
+  --scrollbar-thumb: #3a3f4b;
+  --scrollbar-thumb-hover: #4a4f5b;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --splitter-hover: rgba(74,124,255,0.5);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eaeaec;
+  --bg-elevated: #f0f0f2;
+  --bg-hover: #e5e5e8;
+  --bg-active: #d8d8dc;
+  --bg-input: #ffffff;
+  --bg-editor: #fafafa;
+  --bg-menu: #ffffff;
+  --bg-modal-overlay: rgba(0,0,0,0.3);
+  --border-primary: #d1d5db;
+  --border-secondary: #e5e7eb;
+  --border-focus: #2563eb;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
+  --accent: #2563eb;
+  --accent-hover: #3b74f0;
+  --accent-active: #1d5ad4;
+  --accent-bg: rgba(37,99,235,0.08);
+  --success: #16a34a;
+  --success-bg: rgba(22,163,74,0.08);
+  --warning: #ca8a04;
+  --warning-bg: rgba(202,138,4,0.08);
+  --danger: #dc2626;
+  --danger-bg: rgba(220,38,38,0.08);
+  --null-text: #9ca3af;
+  --row-alt: rgba(0,0,0,0.02);
+  --row-modified: rgba(202,138,4,0.08);
+  --row-new: rgba(22,163,74,0.08);
+  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+  --splitter-hover: rgba(37,99,235,0.4);
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--transition-speed), color var(--transition-speed);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
+
+/* ========== App Layout ========== */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 900px;
+}
+
+/* ========== MenuBar ========== */
+.menubar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  padding: 0 4px;
+  user-select: none;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.menubar-item {
+  position: relative;
+  padding: 2px 10px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background var(--transition-speed);
+}
+.menubar-item:hover, .menubar-item.active {
+  background: var(--bg-hover);
+}
+.menubar-item .underline { text-decoration: underline; }
+
+.menubar-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 4px 0;
+  z-index: 200;
+}
+.menubar-item.active .menubar-dropdown { display: block; }
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 16px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.dropdown-item:hover { background: var(--accent); color: #fff; }
+.dropdown-item .shortcut { color: var(--text-tertiary); font-size: 11px; margin-left: 24px; }
+.dropdown-item:hover .shortcut { color: rgba(255,255,255,0.7); }
+.dropdown-separator { height: 1px; background: var(--border-secondary); margin: 4px 8px; }
+.dropdown-item.checkbox-item::before {
+  content: '';
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 3px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+.dropdown-item.checkbox-item.checked::before {
+  background: var(--accent);
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+
+/* ========== ToolBar ========== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  padding: 0 6px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background var(--transition-speed), color var(--transition-speed);
+  white-space: nowrap;
+  position: relative;
+}
+.toolbar-btn:hover { background: var(--bg-hover); }
+.toolbar-btn:active { background: var(--bg-active); }
+.toolbar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.toolbar-btn:disabled:hover { background: transparent; }
+.toolbar-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-primary);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-btn .tooltip {
+  display: none;
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 11px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  z-index: 300;
+  pointer-events: none;
+}
+.toolbar-btn:hover .tooltip { display: block; }
+
+.toolbar-spacer { flex: 1; }
+
+/* ========== Main Content Area ========== */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ========== Sidebar ========== */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  min-width: 180px;
+  max-width: 500px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.sidebar-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.sidebar-header-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* Connection List */
+.connection-list {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.connection-item:hover { background: var(--bg-hover); }
+.connection-item.active { background: var(--accent-bg); }
+
+.connection-icon {
+  width: 20px; height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.connection-icon.mysql { background: #00758f22; color: #00758f; }
+.connection-icon.postgresql { background: #33679122; color: #336791; }
+.connection-icon.sqlite { background: #044a6422; color: #044a64; }
+[data-theme="light"] .connection-icon.mysql { background: #00758f18; }
+[data-theme="light"] .connection-icon.postgresql { background: #33679118; }
+[data-theme="light"] .connection-icon.sqlite { background: #044a6418; }
+
+.connection-info { flex: 1; min-width: 0; }
+.connection-name { font-size: 12.5px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.connection-host { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.connection-status {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.connection-status.connected { background: var(--success); box-shadow: 0 0 4px var(--success); }
+.connection-status.disconnected { background: var(--text-tertiary); }
+
+/* Object Tree */
+.object-tree {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 0;
+}
+
+.tree-node {
+  user-select: none;
+}
+
+.tree-node-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.tree-node-header:hover { background: var(--bg-hover); }
+.tree-node-header.selected { background: var(--accent-bg); color: var(--accent); }
+
+.tree-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.tree-expand.expanded { transform: rotate(90deg); }
+.tree-expand.empty { visibility: hidden; }
+
+.tree-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.tree-icon svg { width: 14px; height: 14px; }
+
+.tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.tree-children {
+  padding-left: 16px;
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+.tree-children.collapsed { max-height: 0 !important; }
+
+/* ========== Splitter ========== */
+.splitter {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.splitter::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 2px; right: 2px;
+  border-radius: 2px;
+}
+.splitter:hover, .splitter.dragging {
+  background: var(--splitter-hover);
+}
+
+/* ========== Query Area ========== */
+.query-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 400px;
+}
+
+/* Tab Control */
+.tab-control {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-secondary);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+.tab-bar::-webkit-scrollbar { height: 0; }
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-right: 1px solid var(--border-secondary);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+  min-width: 80px;
+}
+.tab-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tab-item.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: -1px;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+}
+.tab-item:hover .tab-close, .tab-item.active .tab-close { opacity: 0.6; }
+.tab-close:hover { opacity: 1 !important; background: var(--bg-active); }
+.tab-close svg { width: 10px; height: 10px; }
+
+.tab-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.1s, color 0.1s;
+}
+.tab-add:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tab-add svg { width: 14px; height: 14px; }
+
+/* Tab Content */
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tab-pane {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.tab-pane.active { display: flex; }
+
+/* SQL Editor */
+.editor-container {
+  display: flex;
+  flex: 1;
+  min-height: 100px;
+  max-height: 300px;
+  border-bottom: 1px solid var(--border-secondary);
+  overflow: hidden;
+}
+
+.line-numbers {
+  width: 44px;
+  background: var(--bg-editor);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 8px 8px 8px 4px;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+  border-right: 1px solid var(--border-secondary);
+  flex-shrink: 0;
+}
+
+.sql-editor {
+  flex: 1;
+  background: var(--bg-editor);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: auto;
+  tab-size: 2;
+}
+
+/* Execution Control Bar */
+.exec-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+  flex-shrink: 0;
+}
+
+.exec-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.exec-btn svg { width: 13px; height: 13px; }
+
+.exec-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.exec-btn.primary:hover { background: var(--accent-hover); }
+.exec-btn.primary:active { background: var(--accent-active); }
+.exec-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.exec-btn.secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+.exec-btn.secondary:hover { background: var(--bg-hover); }
+.exec-btn.secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.exec-btn.danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid transparent;
+}
+.exec-btn.danger:hover { background: var(--danger); color: #fff; }
+.exec-btn.danger:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.exec-elapsed {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.exec-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+.exec-spinner.active { display: inline-block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Result Area */
+.result-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  flex-shrink: 0;
+}
+
+.result-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.result-toolbar-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.result-toolbar-btn svg { width: 13px; height: 13px; }
+
+.result-toolbar-btn.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.edit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 32px; height: 18px;
+  background: var(--bg-active);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-switch.on { background: var(--accent); }
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch.on::after { transform: translateX(14px); }
+
+.edit-actions {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+}
+.edit-actions.visible { display: flex; }
+
+/* Grid View */
+.grid-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+}
+
+.grid-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: 5px 10px;
+  border-bottom: 2px solid var(--border-primary);
+  border-right: 1px solid var(--border-secondary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 5;
+  transition: background 0.1s;
+}
+.grid-table th:hover { background: var(--bg-hover); }
+.grid-table th .sort-arrow { margin-left: 4px; font-size: 10px; opacity: 0.5; }
+.grid-table th .sort-arrow.active { opacity: 1; color: var(--accent); }
+
+.grid-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+  border-right: 1px solid var(--border-secondary);
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-table tr:nth-child(even) td { background: var(--row-alt); }
+.grid-table tr:hover td { background: var(--bg-hover); }
+
+.grid-table td.null-value {
+  color: var(--null-text);
+  font-style: italic;
+}
+
+.grid-table tr.row-modified td { background: var(--row-modified) !important; }
+.grid-table tr.row-new td { background: var(--row-new) !important; }
+.grid-table tr.row-deleted td {
+  background: var(--danger-bg) !important;
+  color: var(--danger);
+  text-decoration: line-through;
+}
+
+.grid-table td.editable {
+  cursor: text;
+}
+.grid-table td.editing {
+  padding: 0;
+}
+.grid-table td.editing input {
+  width: 100%;
+  height: 100%;
+  padding: 4px 10px;
+  border: none;
+  outline: none;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* Column resize handle */
+.th-resize {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+}
+.th-resize:hover { background: var(--accent); }
+
+/* Pagination Bar */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-secondary);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.pagination-info { white-space: nowrap; }
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 22px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.1s;
+}
+.page-btn:hover { background: var(--bg-hover); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn svg { width: 12px; height: 12px; }
+
+.page-input {
+  width: 36px; height: 22px;
+  text-align: center;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+.page-input:focus { border-color: var(--border-focus); }
+
+.page-total { font-size: 12px; color: var(--text-secondary); }
+
+.pagination-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.page-size-select {
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+  cursor: pointer;
+}
+.page-size-select:focus { border-color: var(--border-focus); }
+
+/* ========== StatusBar ========== */
+.statusbar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  background: var(--accent);
+  color: #fff;
+  padding: 0 10px;
+  font-size: 11.5px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.statusbar-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.statusbar-section.center { margin: 0 auto; }
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* ========== Modal ========== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg-modal-overlay);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s;
+}
+.modal-overlay.visible { display: flex; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  width: 560px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s;
+}
+
+@keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+.modal-close svg { width: 16px; height: 16px; }
+
+.modal-body {
+  padding: 18px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+/* Connection Dialog */
+.db-type-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.db-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 2px solid var(--border-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  min-width: 70px;
+}
+.db-type-option:hover { border-color: var(--accent); background: var(--accent-bg); }
+.db-type-option.selected { border-color: var(--accent); background: var(--accent-bg); }
+.db-type-option .db-icon { font-size: 18px; font-weight: 700; }
+.db-type-option .db-label { font-size: 11px; color: var(--text-secondary); }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.form-input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--border-focus); }
+
+.form-select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  outline: none;
+  cursor: pointer;
+}
+.form-select:focus { border-color: var(--border-focus); }
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.form-checkbox input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-primary); }
+.btn-secondary:hover { background: var(--bg-hover); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { opacity: 0.9; }
+.btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn .spinner {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+.btn.loading .spinner { display: inline-block; }
+.btn.loading .btn-text { display: none; }
+
+/* ========== Context Menu ========== */
+.context-menu {
+  display: none;
+  position: fixed;
+  min-width: 160px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 4px 0;
+  z-index: 400;
+}
+.context-menu.visible { display: block; }
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.context-menu-item:hover { background: var(--accent); color: #fff; }
+.context-menu-item.danger:hover { background: var(--danger); }
+.context-menu-separator { height: 1px; background: var(--border-secondary); margin: 4px 8px; }
+
+/* ========== Toast ========== */
+.toast-container {
+  position: fixed;
+  top: 40px;
+  right: 16px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  animation: toastIn 0.25s ease;
+  min-width: 200px;
+}
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+.toast.info { border-left: 3px solid var(--accent); }
+
+@keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.toast.removing { animation: toastOut 0.2s ease forwards; }
+@keyframes toastOut { to { transform: translateX(100%); opacity: 0; } }
+
+/* ========== About Dialog ========== */
+.about-content {
+  text-align: center;
+  padding: 20px;
+}
+.about-content h2 { font-size: 20px; margin-bottom: 8px; }
+.about-content p { color: var(--text-secondary); font-size: 13px; margin-bottom: 4px; }
+.about-logo {
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+
+/* ========== Export Dropdown ========== */
+.export-dropdown {
+  position: relative;
+}
+.export-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 140px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 4px 0;
+  z-index: 50;
+}
+.export-menu.visible { display: block; }
+.export-menu-item {
+  padding: 5px 14px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.export-menu-item:hover { background: var(--accent); color: #fff; }
+
+/* ========== Empty State ========== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-tertiary);
+  gap: 8px;
+}
+.empty-state svg { width: 40px; height: 40px; opacity: 0.3; }
+.empty-state p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- MenuBar -->
+  <div class="menubar" id="menubar"></div>
+
+  <!-- ToolBar -->
+  <div class="toolbar" id="toolbar"></div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span>连接</span>
+        <button class="sidebar-header-btn" onclick="openConnectionDialog()" title="新建连接">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="connection-list" id="connectionList"></div>
+      <div class="sidebar-header">
+        <span>对象浏览器</span>
+      </div>
+      <div class="object-tree" id="objectTree"></div>
+    </div>
+
+    <!-- Splitter -->
+    <div class="splitter" id="splitter"></div>
+
+    <!-- Query Area -->
+    <div class="query-area" id="queryArea">
+      <div class="tab-control" id="tabControl">
+        <div class="tab-bar" id="tabBar"></div>
+        <div class="tab-content" id="tabContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- StatusBar -->
+  <div class="statusbar" id="statusbar">
+    <div class="statusbar-section">
+      <span class="status-dot"></span>
+      <span id="statusConnection">localhost:3306</span>
+    </div>
+    <div class="statusbar-section center">
+      <span id="statusText">就绪</span>
+    </div>
+    <div class="statusbar-section">
+      <span id="statusQueryCount">查询数: 0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Overlay -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu"></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ========== DATA ==========
+const users = [
+  { id: 1, name: '张伟', email: 'zhangwei@example.com', age: 28, city: '北京', created_at: '2024-01-15' },
+  { id: 2, name: '李娜', email: 'lina@example.com', age: 32, city: '上海', created_at: '2024-02-20' },
+  { id: 3, name: '王强', email: 'wangqiang@example.com', age: 25, city: '深圳', created_at: '2024-03-10' },
+  { id: 4, name: '赵敏', email: 'zhaomin@example.com', age: 29, city: '广州', created_at: '2024-01-22' },
+  { id: 5, name: '陈浩', email: 'chenhao@example.com', age: 35, city: '杭州', created_at: '2024-04-05' },
+  { id: 6, name: '刘洋', email: 'liuyang@example.com', age: 27, city: '成都', created_at: '2024-02-14' },
+  { id: 7, name: '孙丽', email: 'sunli@example.com', age: 31, city: '南京', created_at: '2024-05-18' },
+  { id: 8, name: '周磊', email: 'zhoulei@example.com', age: 24, city: '武汉', created_at: '2024-03-25' },
+  { id: 9, name: '吴芳', email: 'wufang@example.com', age: 33, city: '西安', created_at: '2024-06-01' },
+  { id: 10, name: '郑凯', email: 'zhengkai@example.com', age: 26, city: '重庆', created_at: '2024-04-12' },
+  { id: 11, name: '黄婷', email: 'huangting@example.com', age: 30, city: '天津', created_at: '2024-07-08' },
+  { id: 12, name: '林杰', email: 'linjie@example.com', age: 22, city: '苏州', created_at: '2024-05-30' },
+  { id: 13, name: '何雪', email: 'hexue@example.com', age: 28, city: '长沙', created_at: '2024-08-15' },
+  { id: 14, name: '马超', email: 'machao@example.com', age: 36, city: '郑州', created_at: '2024-06-22' },
+  { id: 15, name: '罗敏', email: 'luomin@example.com', age: 29, city: '青岛', created_at: '2024-09-03' },
+  { id: 16, name: '谢宇', email: 'xieyu@example.com', age: 23, city: '大连', created_at: '2024-07-19' },
+  { id: 17, name: '韩梅', email: 'hanmei@example.com', age: 34, city: '厦门', created_at: '2024-10-01' },
+  { id: 18, name: '唐风', email: 'tangfeng@example.com', age: 27, city: '昆明', created_at: '2024-08-28' },
+  { id: 19, name: '冯刚', email: 'fenggang@example.com', age: 31, city: '合肥', created_at: '2024-11-10' },
+  { id: 20, name: '曹颖', email: 'caoying@example.com', age: 26, city: '福州', created_at: '2024-09-15' },
+];
+
+const connections = [
+  {
+    id: 1, name: '生产数据库', type: 'mysql', host: '192.168.1.100', port: 3306, connected: true,
+    databases: [
+      {
+        name: 'ecommerce', schemas: [
+          { type: '表', items: ['users', 'orders', 'products', 'categories', 'reviews', 'payments', 'shipping'] },
+          { type: '视图', items: ['v_order_summary', 'v_user_stats'] },
+          { type: '存储过程', items: ['sp_calculate_total', 'sp_generate_report'] },
+          { type: '函数', items: ['fn_format_date', 'fn_calc_discount'] }
+        ]
+      },
+      {
+        name: 'analytics', schemas: [
+          { type: '表', items: ['events', 'sessions', 'pageviews', 'conversions'] },
+          { type: '视图', items: ['v_daily_stats', 'v_funnel_analysis'] }
+        ]
+      }
+    ]
+  },
+  {
+    id: 2, name: '测试数据库', type: 'postgresql', host: 'localhost', port: 5432, connected: true,
+    databases: [
+      {
+        name: 'testdb', schemas: [
+          { type: '表', items: ['test_users', 'test_orders'] },
+          { type: '视图', items: ['v_test_summary'] }
+        ]
+      }
+    ]
+  },
+  {
+    id: 3, name: '本地SQLite', type: 'sqlite', host: 'local', port: 0, connected: false,
+    databases: []
+  }
+];
+
+// Table column details for tree expansion
+const tableColumns = {
+  users: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'name', type: 'VARCHAR(50)', pk: false },
+    { name: 'email', type: 'VARCHAR(100)', pk: false },
+    { name: 'age', type: 'INT', pk: false },
+    { name: 'city', type: 'VARCHAR(50)', pk: false },
+    { name: 'created_at', type: 'DATE', pk: false }
+  ],
+  orders: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'user_id', type: 'INT', pk: false },
+    { name: 'total', type: 'DECIMAL(10,2)', pk: false },
+    { name: 'status', type: 'ENUM', pk: false },
+    { name: 'created_at', type: 'DATETIME', pk: false }
+  ],
+  products: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'name', type: 'VARCHAR(100)', pk: false },
+    { name: 'price', type: 'DECIMAL(10,2)', pk: false },
+    { name: 'category_id', type: 'INT', pk: false }
+  ],
+  categories: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'name', type: 'VARCHAR(50)', pk: false },
+    { name: 'parent_id', type: 'INT', pk: false }
+  ],
+  reviews: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'product_id', type: 'INT', pk: false },
+    { name: 'user_id', type: 'INT', pk: false },
+    { name: 'rating', type: 'TINYINT', pk: false },
+    { name: 'comment', type: 'TEXT', pk: false }
+  ],
+  payments: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'order_id', type: 'INT', pk: false },
+    { name: 'method', type: 'VARCHAR(30)', pk: false },
+    { name: 'amount', type: 'DECIMAL(10,2)', pk: false }
+  ],
+  shipping: [
+    { name: 'id', type: 'INT', pk: true },
+    { name: 'order_id', type: 'INT', pk: false },
+    { name: 'address', type: 'TEXT', pk: false },
+    { name: 'status', type: 'VARCHAR(20)', pk: false }
+  ],
+  events: [
+    { name: 'id', type: 'BIGINT', pk: true },
+    { name: 'event_name', type: 'VARCHAR(100)', pk: false },
+    { name: 'user_id', type: 'INT', pk: false },
+    { name: 'timestamp', type: 'DATETIME', pk: false }
+  ],
+  sessions: [
+    { name: 'id', type: 'BIGINT', pk: true },
+    { name: 'user_id', type: 'INT', pk: false },
+    { name: 'duration', type: 'INT', pk: false }
+  ],
+  pageviews: [
+    { name: 'id', type: 'BIGINT', pk: true },
+    { name: 'url', type: 'VARCHAR(255)', pk: false },
+    { name: 'session_id', type: 'BIGINT', pk: false }
+  ],
+  conversions: [
+    { name: 'id', type: 'BIGINT', pk: true },
+    { name: 'session_id', type: 'BIGINT', pk: false },
+    { name: 'revenue', type: 'DECIMAL(10,2)', pk: false }
+  ],
+  test_users: [
+    { name: 'id', type: 'SERIAL', pk: true },
+    { name: 'username', type: 'VARCHAR(50)', pk: false },
+    { name: 'email', type: 'VARCHAR(100)', pk: false }
+  ],
+  test_orders: [
+    { name: 'id', type: 'SERIAL', pk: true },
+    { name: 'user_id', type: 'INT', pk: false },
+    { name: 'amount', type: 'NUMERIC(10,2)', pk: false }
+  ]
+};
+
+// ========== STATE ==========
+let state = {
+  activeConnection: 1,
+  activeTab: 0,
+  tabs: [{ id: 0, title: '查询 1', sql: 'SELECT * FROM users WHERE age > 25 ORDER BY name;', results: null, executing: false, elapsed: 0 }],
+  nextTabId: 1,
+  queryCount: 0,
+  editMode: false,
+  modifiedRows: new Set(),
+  newRows: new Set(),
+  deletedRows: new Set(),
+  currentPage: 1,
+  pageSize: 100,
+  totalRows: 156,
+  sortColumn: null,
+  sortDirection: 'asc',
+  currentData: [...users],
+  menuOpen: null,
+  viewObjectBrowser: true,
+  viewQueryHistory: false,
+  columnWidths: {}
+};
+
+// ========== SVG ICONS ==========
+const icons = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>',
+  playSelect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21" fill="currentColor"/><line x1="3" y1="4" x2="3" y2="14" stroke-width="3"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  connect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>',
+  query: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>',
+  db: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+  table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>',
+  view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  proc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="9" y1="7" x2="9" y2="17"/><line x1="15" y1="7" x2="15" y2="17"/></svg>',
+  func: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>',
+  column: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><line x1="14" y1="4" x2="21" y2="4"/><line x1="14" y1="9" x2="21" y2="9"/><line x1="14" y1="14" x2="21" y2="14"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+  export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>',
+  chevronRightSmall: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>',
+};
+
+// ========== THEME ==========
+function initTheme() {
+  const saved = localStorage.getItem('mewdb-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('mewdb-theme', next);
+  renderToolbar();
+}
+
+// ========== MENUBAR ==========
+function renderMenuBar() {
+  const menubar = document.getElementById('menubar');
+  const menus = [
+    {
+      label: '<span class="underline">文</span>件(F)',
+      items: [
+        { label: '新建连接', action: () => openConnectionDialog() },
+        { label: '新建查询', shortcut: 'Ctrl+N', action: () => addTab() },
+        { separator: true },
+        { label: '退出', action: () => showToast('退出功能仅作演示', 'info') }
+      ]
+    },
+    {
+      label: '<span class="underline">编</span>辑(E)',
+      items: [
+        { label: '复制', shortcut: 'Ctrl+C', action: () => document.execCommand('copy') },
+        { label: '粘贴', shortcut: 'Ctrl+V', action: () => document.execCommand('paste') }
+      ]
+    },
+    {
+      label: '<span class="underline">视</span>图(V)',
+      items: [
+        { label: '对象浏览器', checkbox: true, checked: state.viewObjectBrowser, action: () => { state.viewObjectBrowser = !state.viewObjectBrowser; toggleSidebar(); } },
+        { label: '查询历史', checkbox: true, checked: state.viewQueryHistory, action: () => { state.viewQueryHistory = !state.viewQueryHistory; showToast('查询历史面板切换', 'info'); } }
+      ]
+    },
+    {
+      label: '<span class="underline">帮</span>助(H)',
+      items: [
+        { label: '关于', action: () => showAboutDialog() }
+      ]
+    }
+  ];
+
+  menubar.innerHTML = menus.map((menu, i) => `
+    <div class="menubar-item" data-menu="${i}" onclick="toggleMenu(event, ${i})" onmouseenter="hoverMenu(event, ${i})">
+      ${menu.label}
+      <div class="menubar-dropdown">
+        ${menu.items.map(item => {
+          if (item.separator) return '<div class="dropdown-separator"></div>';
+          const classes = [];
+          if (item.checkbox) { classes.push('checkbox-item'); if (item.checked) classes.push('checked'); }
+          return `<div class="dropdown-item ${classes.join(' ')}" onclick="menuAction(event, ${i}, '${item.label}')">
+            <span>${item.checkbox ? item.label : item.label}</span>
+            ${item.shortcut ? `<span class="shortcut">${item.shortcut}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+const menuActions = {};
+function registerMenuAction(menuIdx, label, action) {
+  menuActions[`${menuIdx}-${label}`] = action;
+}
+
+function initMenuActions() {
+  registerMenuAction(0, '新建连接', () => openConnectionDialog());
+  registerMenuAction(0, '新建查询', () => addTab());
+  registerMenuAction(0, '退出', () => showToast('退出功能仅作演示', 'info'));
+  registerMenuAction(1, '复制', () => document.execCommand('copy'));
+  registerMenuAction(1, '粘贴', () => document.execCommand('paste'));
+  registerMenuAction(2, '对象浏览器', () => { state.viewObjectBrowser = !state.viewObjectBrowser; toggleSidebar(); });
+  registerMenuAction(2, '查询历史', () => { state.viewQueryHistory = !state.viewQueryHistory; showToast('查询历史面板切换', 'info'); });
+  registerMenuAction(3, '关于', () => showAboutDialog());
+}
+
+function toggleMenu(e, idx) {
+  e.stopPropagation();
+  const items = document.querySelectorAll('.menubar-item');
+  const wasActive = items[idx].classList.contains('active');
+  items.forEach(el => el.classList.remove('active'));
+  if (!wasActive) items[idx].classList.add('active');
+}
+
+function hoverMenu(e, idx) {
+  if (document.querySelector('.menubar-item.active')) {
+    const items = document.querySelectorAll('.menubar-item');
+    items.forEach(el => el.classList.remove('active'));
+    items[idx].classList.add('active');
+  }
+}
+
+function menuAction(e, menuIdx, label) {
+  e.stopPropagation();
+  document.querySelectorAll('.menubar-item').forEach(el => el.classList.remove('active'));
+  const key = `${menuIdx}-${label}`;
+  if (menuActions[key]) menuActions[key]();
+}
+
+// ========== TOOLBAR ==========
+function renderToolbar() {
+  const toolbar = document.getElementById('toolbar');
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  toolbar.innerHTML = `
+    <button class="toolbar-btn" onclick="openConnectionDialog()">
+      ${icons.connect}<span>新建连接</span>
+      <span class="tooltip">新建数据库连接</span>
+    </button>
+    <button class="toolbar-btn" onclick="addTab()">
+      ${icons.query}<span>新建查询</span>
+      <span class="tooltip">新建查询 (Ctrl+N)</span>
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="executeQuery(${state.activeTab})" id="tbExec">
+      ${icons.play}<span>执行</span>
+      <span class="tooltip">执行查询 (F5)</span>
+    </button>
+    <button class="toolbar-btn" onclick="executeSelected(${state.activeTab})">
+      ${icons.playSelect}<span>执行选中</span>
+      <span class="tooltip">执行选中语句 (F9)</span>
+    </button>
+    <button class="toolbar-btn" onclick="stopQuery(${state.activeTab})" id="tbStop" disabled>
+      ${icons.stop}<span>停止</span>
+      <span class="tooltip">停止执行</span>
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="refreshTree()">
+      ${icons.refresh}<span>刷新</span>
+      <span class="tooltip">刷新对象树</span>
+    </button>
+    <div class="toolbar-spacer"></div>
+    <button class="toolbar-btn" onclick="toggleTheme()">
+      ${isDark ? icons.sun : icons.moon}
+      <span class="tooltip">${isDark ? '切换到亮色模式' : '切换到暗色模式'}</span>
+    </button>
+  `;
+}
+
+// ========== CONNECTION LIST ==========
+function renderConnectionList() {
+  const list = document.getElementById('connectionList');
+  list.innerHTML = connections.map(conn => `
+    <div class="connection-item ${conn.id === state.activeConnection ? 'active' : ''}" onclick="selectConnection(${conn.id})">
+      <div class="connection-icon ${conn.type}">${conn.type === 'mysql' ? 'M' : conn.type === 'postgresql' ? 'P' : 'S'}</div>
+      <div class="connection-info">
+        <div class="connection-name">${conn.name}</div>
+        <div class="connection-host">${conn.host}${conn.port ? ':' + conn.port : ''}</div>
+      </div>
+      <div class="connection-status ${conn.connected ? 'connected' : 'disconnected'}"></div>
+    </div>
+  `).join('');
+}
+
+function selectConnection(id) {
+  state.activeConnection = id;
+  const conn = connections.find(c => c.id === id);
+  if (conn && !conn.connected) {
+    conn.connected = true;
+    showToast(`已连接到 ${conn.name}`, 'success');
+  }
+  renderConnectionList();
+  renderObjectTree();
+  updateStatusBar();
+}
+
+// ========== OBJECT TREE ==========
+function renderObjectTree() {
+  const tree = document.getElementById('objectTree');
+  const conn = connections.find(c => c.id === state.activeConnection);
+  if (!conn || !conn.connected || !conn.databases.length) {
+    tree.innerHTML = '<div class="empty-state"><p>无可用对象</p></div>';
+    return;
+  }
+
+  tree.innerHTML = conn.databases.map((db, dbIdx) => `
+    <div class="tree-node">
+      <div class="tree-node-header" onclick="toggleTreeNode(this)" oncontextmenu="showTreeContextMenu(event, 'database', '${db.name}')">
+        <span class="tree-expand">${icons.chevronRight}</span>
+        <span class="tree-icon">${icons.db}</span>
+        <span class="tree-label">${db.name}</span>
+      </div>
+      <div class="tree-children collapsed">
+        ${db.schemas.map((schema, sIdx) => `
+          <div class="tree-node">
+            <div class="tree-node-header" onclick="toggleTreeNode(this)">
+              <span class="tree-expand">${icons.chevronRight}</span>
+              <span class="tree-icon">${getSchemaIcon(schema.type)}</span>
+              <span class="tree-label">${schema.type}</span>
+              <span style="color:var(--text-tertiary);font-size:11px;margin-left:auto;">${schema.items.length}</span>
+            </div>
+            <div class="tree-children collapsed">
+              ${schema.items.map(item => `
+                <div class="tree-node">
+                  <div class="tree-node-header" onclick="toggleTreeNode(this)" oncontextmenu="showTreeContextMenu(event, '${schema.type === '表' ? 'table' : schema.type === '视图' ? 'view' : 'proc'}', '${item}')" ondblclick="onObjectDoubleClick('${schema.type}', '${item}')">
+                    <span class="tree-expand ${schema.type === '表' ? '' : 'empty'}">${icons.chevronRight}</span>
+                    <span class="tree-icon" style="opacity:0.7">${getSchemaIcon(schema.type)}</span>
+                    <span class="tree-label">${item}</span>
+                  </div>
+                  ${schema.type === '表' ? `
+                  <div class="tree-children collapsed">
+                    ${(tableColumns[item] || [{name:'id',type:'INT',pk:true},{name:'data',type:'TEXT',pk:false}]).map(col => `
+                      <div class="tree-node">
+                        <div class="tree-node-header" oncontextmenu="showTreeContextMenu(event, 'column', '${col.name}')">
+                          <span class="tree-expand empty">${icons.chevronRight}</span>
+                          <span class="tree-icon" style="opacity:0.5">${col.pk ? icons.key : icons.column}</span>
+                          <span class="tree-label">${col.name}</span>
+                          <span style="color:var(--text-tertiary);font-size:10.5px;margin-left:auto;font-family:var(--font-mono)">${col.type}</span>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function getSchemaIcon(type) {
+  switch(type) {
+    case '表': return icons.table;
+    case '视图': return icons.view;
+    case '存储过程': return icons.proc;
+    case '函数': return icons.func;
+    default: return icons.table;
+  }
+}
+
+function toggleTreeNode(header) {
+  const expand = header.querySelector('.tree-expand');
+  const children = header.nextElementSibling;
+  if (!children || !children.classList.contains('tree-children')) return;
+
+  if (children.classList.contains('collapsed')) {
+    children.classList.remove('collapsed');
+    children.style.maxHeight = children.scrollHeight + 'px';
+    if (expand) expand.classList.add('expanded');
+  } else {
+    children.style.maxHeight = children.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      children.classList.add('collapsed');
+      if (expand) expand.classList.remove('expanded');
+    });
+  }
+}
+
+function onObjectDoubleClick(type, name) {
+  if (type === '表') {
+    const tab = state.tabs[state.activeTab];
+    if (tab) {
+      tab.sql = `SELECT * FROM ${name} LIMIT 100;`;
+      const editor = document.getElementById(`editor-${state.activeTab}`);
+      if (editor) {
+        editor.value = tab.sql;
+        updateLineNumbers(state.activeTab);
+      }
+    }
+    // Load sample data for users table
+    if (name === 'users') {
+      state.currentData = [...users];
+      state.totalRows = 156;
+    } else {
+      // Generate sample data for other tables
+      state.currentData = generateSampleData(name);
+      state.totalRows = Math.floor(Math.random() * 500) + 50;
+    }
+    state.currentPage = 1;
+    state.sortColumn = null;
+    renderActiveResult();
+  }
+}
+
+function generateSampleData(tableName) {
+  const cols = tableColumns[tableName] || [{name:'id',type:'INT',pk:true}];
+  return Array.from({length: 10}, (_, i) => {
+    const row = {};
+    cols.forEach(c => {
+      if (c.pk) row[c.name] = i + 1;
+      else if (c.type.includes('VARCHAR') || c.type.includes('TEXT')) row[c.name] = `${tableName}_${c.name}_${i+1}`;
+      else if (c.type.includes('INT') || c.type.includes('BIGINT') || c.type === 'SERIAL') row[c.name] = Math.floor(Math.random() * 1000);
+      else if (c.type.includes('DECIMAL') || c.type.includes('NUMERIC')) row[c.name] = (Math.random() * 10000).toFixed(2);
+      else if (c.type.includes('DATE') || c.type.includes('TIME')) row[c.name] = '2024-01-' + String(Math.floor(Math.random()*28)+1).padStart(2,'0');
+      else if (c.type === 'ENUM') row[c.name] = ['pending','processing','completed','cancelled'][Math.floor(Math.random()*4)];
+      else row[c.name] = null;
+    });
+    return row;
+  });
+}
+
+function refreshTree() {
+  renderObjectTree();
+  showToast('对象树已刷新', 'info');
+}
+
+// ========== TAB CONTROL ==========
+function renderTabs() {
+  const tabBar = document.getElementById('tabBar');
+  const tabContent = document.getElementById('tabContent');
+
+  tabBar.innerHTML = state.tabs.map((tab, i) => `
+    <div class="tab-item ${i === state.activeTab ? 'active' : ''}" onclick="switchTab(${i})" oncontextmenu="showTabContextMenu(event, ${i})">
+      ${icons.query}
+      <span>${tab.title}</span>
+      <span class="tab-close" onclick="closeTab(event, ${i})">${icons.close}</span>
+    </div>
+  `).join('') + `
+    <div class="tab-add" onclick="addTab()">${icons.plus}</div>
+  `;
+
+  tabContent.innerHTML = state.tabs.map((tab, i) => `
+    <div class="tab-pane ${i === state.activeTab ? 'active' : ''}" id="pane-${i}">
+      <div class="editor-container" id="editorContainer-${i}">
+        <div class="line-numbers" id="lineNumbers-${i}">1</div>
+        <textarea class="sql-editor" id="editor-${i}" spellcheck="false"
+          oninput="onEditorInput(${i})" onscroll="syncLineNumbers(${i})" onkeydown="handleEditorKeydown(event, ${i})"
+        >${tab.sql}</textarea>
+      </div>
+      <div class="exec-bar">
+        <button class="exec-btn primary" onclick="executeQuery(${i})" id="execBtn-${i}" ${tab.executing ? 'disabled' : ''}>
+          ${icons.play} <span>执行</span>
+        </button>
+        <button class="exec-btn secondary" onclick="executeSelected(${i})" ${tab.executing ? 'disabled' : ''}>
+          ${icons.playSelect} <span>执行选中</span>
+        </button>
+        <button class="exec-btn danger" onclick="stopQuery(${i})" id="stopBtn-${i}" ${!tab.executing ? 'disabled' : ''}>
+          ${icons.stop} <span>停止</span>
+        </button>
+        <div class="exec-spinner ${tab.executing ? 'active' : ''}" id="spinner-${i}"></div>
+        <span class="exec-elapsed" id="elapsed-${i}">耗时: ${tab.elapsed}ms</span>
+      </div>
+      <div class="result-area" id="resultArea-${i}">
+        ${i === state.activeTab ? renderResultToolbar() + renderGrid() : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Update line numbers for active tab
+  updateLineNumbers(state.activeTab);
+}
+
+function switchTab(idx) {
+  state.activeTab = idx;
+  renderTabs();
+}
+
+function addTab() {
+  const id = state.nextTabId++;
+  state.tabs.push({
+    id,
+    title: `查询 ${state.tabs.length + 1}`,
+    sql: '',
+    results: null,
+    executing: false,
+    elapsed: 0
+  });
+  state.activeTab = state.tabs.length - 1;
+  renderTabs();
+  // Focus the new editor
+  setTimeout(() => {
+    const editor = document.getElementById(`editor-${state.activeTab}`);
+    if (editor) editor.focus();
+  }, 50);
+}
+
+function closeTab(e, idx) {
+  e.stopPropagation();
+  if (state.tabs.length <= 1) {
+    showToast('至少保留一个查询标签', 'info');
+    return;
+  }
+  state.tabs.splice(idx, 1);
+  if (state.activeTab >= state.tabs.length) state.activeTab = state.tabs.length - 1;
+  if (state.activeTab > idx) state.activeTab--;
+  else if (state.activeTab === idx && state.activeTab >= state.tabs.length) state.activeTab = state.tabs.length - 1;
+  renderTabs();
+}
+
+function onEditorInput(tabIdx) {
+  const editor = document.getElementById(`editor-${tabIdx}`);
+  if (editor) {
+    state.tabs[tabIdx].sql = editor.value;
+    updateLineNumbers(tabIdx);
+  }
+}
+
+function updateLineNumbers(tabIdx) {
+  const editor = document.getElementById(`editor-${tabIdx}`);
+  const ln = document.getElementById(`lineNumbers-${tabIdx}`);
+  if (!editor || !ln) return;
+  const lines = editor.value.split('\n').length;
+  ln.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+}
+
+function syncLineNumbers(tabIdx) {
+  const editor = document.getElementById(`editor-${tabIdx}`);
+  const ln = document.getElementById(`lineNumbers-${tabIdx}`);
+  if (editor && ln) ln.scrollTop = editor.scrollTop;
+}
+
+function handleEditorKeydown(e, tabIdx) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const editor = e.target;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+    onEditorInput(tabIdx);
+  }
+  if (e.key === 'F5') {
+    e.preventDefault();
+    executeQuery(tabIdx);
+  }
+}
+
+// ========== QUERY EXECUTION ==========
+function executeQuery(tabIdx) {
+  const tab = state.tabs[tabIdx];
+  if (!tab || tab.executing) return;
+
+  tab.executing = true;
+  tab.elapsed = 0;
+  state.queryCount++;
+  updateStatusBar();
+  renderTabs();
+
+  document.getElementById('statusText').textContent = '正在执行查询...';
+
+  const startTime = Date.now();
+  const timer = setInterval(() => {
+    tab.elapsed = Date.now() - startTime;
+    const el = document.getElementById(`elapsed-${tabIdx}`);
+    if (el) el.textContent = `耗时: ${tab.elapsed}ms`;
+  }, 50);
+
+  // Simulate execution
+  const duration = 800 + Math.random() * 1200;
+  setTimeout(() => {
+    clearInterval(timer);
+    tab.executing = false;
+    tab.elapsed = Math.round(duration);
+    tab.results = true;
+
+    // Set current data
+    const sql = tab.sql.toLowerCase();
+    if (sql.includes('users')) {
+      state.currentData = [...users];
+      state.totalRows = 156;
+    } else {
+      state.currentData = generateSampleData('result');
+      state.totalRows = Math.floor(Math.random() * 500) + 50;
+    }
+    state.currentPage = 1;
+    state.sortColumn = null;
+    state.modifiedRows.clear();
+    state.newRows.clear();
+    state.deletedRows.clear();
+
+    document.getElementById('statusText').textContent = '就绪';
+    renderTabs();
+    showToast(`查询完成，返回 ${state.currentData.length} 行`, 'success');
+  }, duration);
+}
+
+function executeSelected(tabIdx) {
+  const editor = document.getElementById(`editor-${tabIdx}`);
+  if (editor && editor.selectionStart !== editor.selectionEnd) {
+    showToast('执行选中语句（模拟）', 'info');
+    executeQuery(tabIdx);
+  } else {
+    showToast('请先选中要执行的SQL语句', 'info');
+  }
+}
+
+function stopQuery(tabIdx) {
+  const tab = state.tabs[tabIdx];
+  if (!tab || !tab.executing) return;
+  tab.executing = false;
+  document.getElementById('statusText').textContent = '就绪';
+  renderTabs();
+  showToast('查询已停止', 'info');
+}
+
+// ========== RESULT GRID ==========
+function renderResultToolbar() {
+  return `
+    <div class="result-toolbar">
+      <button class="result-toolbar-btn" onclick="executeQuery(${state.activeTab})">${icons.refresh} 刷新</button>
+      <div class="export-dropdown">
+        <button class="result-toolbar-btn" onclick="toggleExportMenu(event)">${icons.export} 导出</button>
+        <div class="export-menu" id="exportMenu">
+          <div class="export-menu-item" onclick="exportData('CSV')">CSV</div>
+          <div class="export-menu-item" onclick="exportData('JSON')">JSON</div>
+          <div class="export-menu-item" onclick="exportData('SQL INSERT')">SQL INSERT</div>
+          <div class="export-menu-item" onclick="exportData('Excel')">Excel</div>
+        </div>
+      </div>
+      <div class="edit-toggle">
+        <span>编辑模式</span>
+        <div class="toggle-switch ${state.editMode ? 'on' : ''}" onclick="toggleEditMode()"></div>
+      </div>
+      <div class="edit-actions ${state.editMode && (state.modifiedRows.size || state.newRows.size || state.deletedRows.size) ? 'visible' : ''}">
+        <button class="exec-btn primary" style="height:22px;font-size:11px;padding:0 8px;" onclick="commitChanges()">
+          ${icons.check} 提交
+        </button>
+        <button class="exec-btn secondary" style="height:22px;font-size:11px;padding:0 8px;" onclick="rollbackChanges()">
+          回滚
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderGrid() {
+  const data = state.currentData;
+  if (!data || !data.length) {
+    return '<div class="empty-state"><p>执行查询以查看结果</p></div>';
+  }
+
+  const cols = Object.keys(data[0]);
+  const sortedData = getSortedData(data, cols);
+
+  return `
+    <div class="grid-container" id="gridContainer">
+      <table class="grid-table" id="gridTable">
+        <thead>
+          <tr>
+            ${cols.map(col => `
+              <th style="position:relative;min-width:80px" onclick="sortColumn('${col}')" data-col="${col}">
+                ${col}
+                <span class="sort-arrow ${state.sortColumn === col ? 'active' : ''}">${state.sortColumn === col ? (state.sortDirection === 'asc' ? '▲' : '▼') : '▲'}</span>
+                <div class="th-resize" onmousedown="startResize(event, '${col}')"></div>
+              </th>
+            `).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedData.map((row, rowIdx) => {
+            const rowClass = state.deletedRows.has(rowIdx) ? 'row-deleted' :
+                             state.newRows.has(rowIdx) ? 'row-new' :
+                             state.modifiedRows.has(rowIdx) ? 'row-modified' : '';
+            return `<tr class="${rowClass}">
+              ${cols.map(col => {
+                const val = row[col];
+                const isNull = val === null || val === undefined;
+                const isEditable = state.editMode && !state.deletedRows.has(rowIdx);
+                return `<td class="${isNull ? 'null-value' : ''} ${isEditable ? 'editable' : ''}"
+                  ${isEditable ? `ondblclick="startCellEdit(this, ${rowIdx}, '${col}')"` : ''}
+                  title="${isNull ? '(null)' : val}">${isNull ? '(null)' : val}</td>`;
+              }).join('')}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${renderPagination()}
+  `;
+}
+
+function renderActiveResult() {
+  const resultArea = document.getElementById(`resultArea-${state.activeTab}`);
+  if (resultArea) {
+    resultArea.innerHTML = renderResultToolbar() + renderGrid();
+  }
+}
+
+function getSortedData(data, cols) {
+  if (!state.sortColumn) return data;
+  const sorted = [...data];
+  const col = state.sortColumn;
+  const dir = state.sortDirection === 'asc' ? 1 : -1;
+  sorted.sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb)) * dir;
+  });
+  return sorted;
+}
+
+function sortColumn(col) {
+  if (state.sortColumn === col) {
+    state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.sortColumn = col;
+    state.sortDirection = 'asc';
+  }
+  renderActiveResult();
+}
+
+// Column resize
+let resizeState = null;
+function startResize(e, col) {
+  e.stopPropagation();
+  e.preventDefault();
+  const th = e.target.parentElement;
+  resizeState = { col, th, startX: e.clientX, startWidth: th.offsetWidth };
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('mouseup', stopResize);
+}
+
+function doResize(e) {
+  if (!resizeState) return;
+  const diff = e.clientX - resizeState.startX;
+  resizeState.th.style.width = Math.max(60, resizeState.startWidth + diff) + 'px';
+}
+
+function stopResize() {
+  resizeState = null;
+  document.removeEventListener('mousemove', doResize);
+  document.removeEventListener('mouseup', stopResize);
+}
+
+// Cell editing
+function startCellEdit(td, rowIdx, col) {
+  if (td.querySelector('input')) return;
+  const currentVal = td.textContent === '(null)' ? '' : td.textContent;
+  td.classList.add('editing');
+  td.innerHTML = `<input type="text" value="${currentVal}" onblur="finishCellEdit(this, ${rowIdx}, '${col}')" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}">`;
+  td.querySelector('input').focus();
+  td.querySelector('input').select();
+}
+
+function finishCellEdit(input, rowIdx, col) {
+  const td = input.parentElement;
+  td.classList.remove('editing');
+  if (input.dataset.cancel === '1') {
+    td.textContent = state.currentData[rowIdx][col] || '(null)';
+    return;
+  }
+  const newVal = input.value;
+  const oldVal = state.currentData[rowIdx][col];
+  if (newVal === '' || newVal === '(null)') {
+    state.currentData[rowIdx][col] = null;
+    td.textContent = '(null)';
+    td.classList.add('null-value');
+  } else {
+    state.currentData[rowIdx][col] = isNaN(newVal) ? newVal : Number(newVal);
+    td.textContent = newVal;
+    td.classList.remove('null-value');
+  }
+  if (state.currentData[rowIdx][col] !== oldVal) {
+    state.modifiedRows.add(rowIdx);
+  }
+  renderActiveResult();
+}
+
+// ========== PAGINATION ==========
+function renderPagination() {
+  const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+  return `
+    <div class="pagination-bar">
+      <span class="pagination-info">总计 ${state.totalRows} 行</span>
+      <div class="pagination-controls">
+        <button class="page-btn" onclick="changePage(-1)" ${state.currentPage <= 1 ? 'disabled' : ''}>${icons.chevronLeft}</button>
+        <input class="page-input" type="number" value="${state.currentPage}" min="1" max="${totalPages}" onchange="goToPage(this.value)">
+        <span class="page-total">/ ${totalPages}</span>
+        <button class="page-btn" onclick="changePage(1)" ${state.currentPage >= totalPages ? 'disabled' : ''}>${icons.chevronRightSmall}</button>
+      </div>
+      <div class="pagination-size">
+        <span>每页行数:</span>
+        <select class="page-size-select" onchange="changePageSize(this.value)">
+          <option value="50" ${state.pageSize===50?'selected':''}>50</option>
+          <option value="100" ${state.pageSize===100?'selected':''}>100</option>
+          <option value="200" ${state.pageSize===200?'selected':''}>200</option>
+          <option value="500" ${state.pageSize===500?'selected':''}>500</option>
+          <option value="1000" ${state.pageSize===1000?'selected':''}>1000</option>
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function changePage(delta) {
+  const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+  state.currentPage = Math.max(1, Math.min(totalPages, state.currentPage + delta));
+  renderActiveResult();
+}
+
+function goToPage(val) {
+  const page = parseInt(val) || 1;
+  const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+  state.currentPage = Math.max(1, Math.min(totalPages, page));
+  renderActiveResult();
+}
+
+function changePageSize(val) {
+  state.pageSize = parseInt(val) || 100;
+  state.currentPage = 1;
+  renderActiveResult();
+}
+
+// ========== EDIT MODE ==========
+function toggleEditMode() {
+  state.editMode = !state.editMode;
+  state.modifiedRows.clear();
+  state.newRows.clear();
+  state.deletedRows.clear();
+  renderActiveResult();
+}
+
+function commitChanges() {
+  const changes = state.modifiedRows.size + state.newRows.size + state.deletedRows.size;
+  showToast(`已提交 ${changes} 行更改`, 'success');
+  state.modifiedRows.clear();
+  state.newRows.clear();
+  state.deletedRows.clear();
+  renderActiveResult();
+}
+
+function rollbackChanges() {
+  state.modifiedRows.clear();
+  state.newRows.clear();
+  state.deletedRows.clear();
+  renderActiveResult();
+  showToast('已回滚所有更改', 'info');
+}
+
+// ========== EXPORT ==========
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('visible');
+}
+
+function exportData(format) {
+  const count = state.currentData.length;
+  showToast(`已导出 ${count} 行到 ${format}`, 'success');
+  document.getElementById('exportMenu')?.classList.remove('visible');
+}
+
+// ========== CONTEXT MENUS ==========
+function showTreeContextMenu(e, type, name) {
+  e.preventDefault();
+  e.stopPropagation();
+  const menu = document.getElementById('contextMenu');
+  let items = [];
+
+  if (type === 'table') {
+    items = [
+      { label: '查看数据', action: () => onObjectDoubleClick('表', name) },
+      { label: '编辑结构', action: () => showToast(`编辑 ${name} 结构`, 'info') },
+      { separator: true },
+      { label: '导出', action: () => exportData('CSV') },
+      { separator: true },
+      { label: '删除', danger: true, action: () => showToast(`删除表 ${name}（模拟）`, 'info') }
+    ];
+  } else if (type === 'column') {
+    items = [
+      { label: '修改类型', action: () => showToast(`修改列 ${name} 类型`, 'info') },
+      { label: '添加索引', action: () => showToast(`为 ${name} 添加索引`, 'info') }
+    ];
+  } else if (type === 'view') {
+    items = [
+      { label: '查看数据', action: () => showToast(`查看视图 ${name}`, 'info') },
+      { label: '编辑', action: () => showToast(`编辑视图 ${name}`, 'info') }
+    ];
+  } else if (type === 'proc') {
+    items = [
+      { label: '执行', action: () => showToast(`执行 ${name}`, 'info') },
+      { label: '编辑', action: () => showToast(`编辑 ${name}`, 'info') }
+    ];
+  } else if (type === 'database') {
+    items = [
+      { label: '刷新', action: () => refreshTree() },
+      { separator: true },
+      { label: '新建查询', action: () => addTab() }
+    ];
+  }
+
+  menu.innerHTML = items.map(item => {
+    if (item.separator) return '<div class="context-menu-separator"></div>';
+    return `<div class="context-menu-item ${item.danger ? 'danger' : ''}" onclick="contextMenuAction(${item.action ? 'true' : 'false'}, this)" data-action="${item.label}">${item.label}</div>`;
+  }).join('');
+
+  // Store actions
+  menu._actions = {};
+  items.forEach(item => {
+    if (!item.separator && item.action) {
+      menu._actions[item.label] = item.action;
+    }
+  });
+
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.classList.add('visible');
+}
+
+function contextMenuAction(hasAction, el) {
+  const menu = document.getElementById('contextMenu');
+  const label = el.dataset.action;
+  if (menu._actions && menu._actions[label]) menu._actions[label]();
+  hideContextMenu();
+}
+
+function showTabContextMenu(e, idx) {
+  e.preventDefault();
+  e.stopPropagation();
+  const menu = document.getElementById('contextMenu');
+  const items = [
+    { label: '关闭', action: () => closeTab(new Event('click'), idx) },
+    { label: '关闭其他', action: () => { state.tabs = [state.tabs[idx]]; state.activeTab = 0; renderTabs(); } },
+    { label: '关闭所有', action: () => { state.tabs = [state.tabs[0]]; state.tabs[0].sql = ''; state.activeTab = 0; renderTabs(); } }
+  ];
+
+  menu.innerHTML = items.map(item => `
+    <div class="context-menu-item" onclick="contextMenuAction(true, this)" data-action="${item.label}">${item.label}</div>
+  `).join('');
+
+  menu._actions = {};
+  items.forEach(item => { menu._actions[item.label] = item.action; });
+
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.classList.add('visible');
+}
+
+function hideContextMenu() {
+  document.getElementById('contextMenu').classList.remove('visible');
+}
+
+// ========== CONNECTION DIALOG ==========
+let dialogDbType = 'mysql';
+let dialogPort = 3306;
+
+function openConnectionDialog() {
+  dialogDbType = 'mysql';
+  dialogPort = 3306;
+  const overlay = document.getElementById('modalOverlay');
+  const modal = document.getElementById('modalContent');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <span>新建连接</span>
+      <button class="modal-close" onclick="closeModal()">${icons.close}</button>
+    </div>
+    <div class="modal-body">
+      <div class="db-type-selector">
+        <div class="db-type-option selected" data-type="mysql" onclick="selectDbType('mysql')">
+          <div class="db-icon" style="color:#00758f">M</div>
+          <div class="db-label">MySQL</div>
+        </div>
+        <div class="db-type-option" data-type="postgresql" onclick="selectDbType('postgresql')">
+          <div class="db-icon" style="color:#336791">P</div>
+          <div class="db-label">PostgreSQL</div>
+        </div>
+        <div class="db-type-option" data-type="sqlite" onclick="selectDbType('sqlite')">
+          <div class="db-icon" style="color:#044a64">S</div>
+          <div class="db-label">SQLite</div>
+        </div>
+        <div class="db-type-option" data-type="sqlserver" onclick="selectDbType('sqlserver')">
+          <div class="db-icon" style="color:#cc2927">MS</div>
+          <div class="db-label">SQL Server</div>
+        </div>
+        <div class="db-type-option" data-type="redis" onclick="selectDbType('redis')">
+          <div class="db-icon" style="color:#dc382d">R</div>
+          <div class="db-label">Redis</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class="form-label">连接名称</label>
+        <input class="form-input" id="connName" value="新连接" placeholder="输入连接名称">
+        <label class="form-label">主机地址</label>
+        <input class="form-input" id="connHost" value="localhost" placeholder="输入主机地址">
+        <label class="form-label">端口号</label>
+        <input class="form-input" id="connPort" type="number" value="${dialogPort}" placeholder="端口号">
+        <label class="form-label">用户名</label>
+        <input class="form-input" id="connUser" value="root" placeholder="用户名">
+        <label class="form-label">密码</label>
+        <input class="form-input" id="connPass" type="password" placeholder="密码">
+        <label class="form-label">数据库名</label>
+        <select class="form-select" id="connDb">
+          <option value="">默认</option>
+          <option value="ecommerce">ecommerce</option>
+          <option value="analytics">analytics</option>
+          <option value="testdb">testdb</option>
+        </select>
+        <label class="form-label">字符编码</label>
+        <select class="form-select" id="connCharset">
+          <option value="utf8mb4">UTF-8</option>
+          <option value="gbk">GBK</option>
+          <option value="latin1">Latin1</option>
+        </select>
+        <label class="form-label">自动重连</label>
+        <label class="form-checkbox"><input type="checkbox" id="connAutoReconnect" checked> 启用</label>
+        <label class="form-label">SSL模式</label>
+        <select class="form-select" id="connSSL">
+          <option value="disable">Disable</option>
+          <option value="prefer">Prefer</option>
+          <option value="require">Require</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success" id="testConnBtn" onclick="testConnection()">
+        <span class="spinner"></span>
+        <span class="btn-text">测试连接</span>
+      </button>
+      <button class="btn btn-primary" onclick="saveConnection()">保存</button>
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+    </div>
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function selectDbType(type) {
+  dialogDbType = type;
+  const portMap = { mysql: 3306, postgresql: 5432, sqlserver: 1433, sqlite: 0, redis: 6379 };
+  dialogPort = portMap[type] || 3306;
+
+  document.querySelectorAll('.db-type-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.type === type);
+  });
+
+  const portInput = document.getElementById('connPort');
+  if (portInput) portInput.value = dialogPort;
+}
+
+function testConnection() {
+  const btn = document.getElementById('testConnBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  setTimeout(() => {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    showToast('连接测试成功', 'success');
+  }, 1500);
+}
+
+function saveConnection() {
+  const name = document.getElementById('connName')?.value || '新连接';
+  const host = document.getElementById('connHost')?.value || 'localhost';
+  const port = parseInt(document.getElementById('connPort')?.value) || 3306;
+
+  connections.push({
+    id: connections.length + 1,
+    name,
+    type: dialogDbType,
+    host,
+    port,
+    connected: false,
+    databases: []
+  });
+
+  closeModal();
+  renderConnectionList();
+  showToast(`连接 "${name}" 已保存`, 'success');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+}
+
+// ========== ABOUT DIALOG ==========
+function showAboutDialog() {
+  const overlay = document.getElementById('modalOverlay');
+  const modal = document.getElementById('modalContent');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <span>关于 MewDB</span>
+      <button class="modal-close" onclick="closeModal()">${icons.close}</button>
+    </div>
+    <div class="modal-body">
+      <div class="about-content">
+        <div class="about-logo">MewDB</div>
+        <h2>数据库管理客户端</h2>
+        <p>版本 1.0.0 (Build 20240101)</p>
+        <p style="margin-top:12px">基于 MewUI 框架构建</p>
+        <p style="color:var(--text-tertiary);font-size:11px;margin-top:8px">© 2024 MewUI Team. All rights reserved.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">确定</button>
+    </div>
+  `;
+
+  overlay.classList.add('visible');
+}
+
+// ========== SIDEBAR TOGGLE ==========
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.style.display = state.viewObjectBrowser ? 'flex' : 'none';
+  const splitter = document.getElementById('splitter');
+  splitter.style.display = state.viewObjectBrowser ? 'block' : 'none';
+}
+
+// ========== STATUS BAR ==========
+function updateStatusBar() {
+  const conn = connections.find(c => c.id === state.activeConnection);
+  const connInfo = conn ? `${conn.host}${conn.port ? ':' + conn.port : ''}` : '未连接';
+  document.getElementById('statusConnection').textContent = connInfo;
+  document.getElementById('statusQueryCount').textContent = `查询数: ${state.queryCount}`;
+}
+
+// ========== SPLITTER ==========
+function initSplitter() {
+  const splitter = document.getElementById('splitter');
+  const sidebar = document.getElementById('sidebar');
+  let isDragging = false;
+
+  splitter.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    splitter.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const newWidth = Math.max(180, Math.min(500, e.clientX));
+    sidebar.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    splitter.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}
+
+// ========== TOAST ==========
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const iconMap = { success: icons.check, error: icons.close, info: icons.info };
+  toast.innerHTML = `<span style="display:flex;width:16px;height:16px">${iconMap[type] || iconMap.info}</span> ${message}`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 200);
+  }, 3000);
+}
+
+// ========== GLOBAL EVENT HANDLERS ==========
+document.addEventListener('click', (e) => {
+  // Close menus
+  if (!e.target.closest('.menubar-item')) {
+    document.querySelectorAll('.menubar-item').forEach(el => el.classList.remove('active'));
+  }
+  hideContextMenu();
+  // Close export menu
+  const exportMenu = document.getElementById('exportMenu');
+  if (exportMenu && !e.target.closest('.export-dropdown')) {
+    exportMenu.classList.remove('visible');
+  }
+});
+
+document.addEventListener('contextmenu', (e) => {
+  // Prevent default context menu on the app
+  if (e.target.closest('.object-tree') || e.target.closest('.tab-bar')) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F5') {
+    e.preventDefault();
+    executeQuery(state.activeTab);
+  }
+  if (e.ctrlKey && e.key === 'n') {
+    e.preventDefault();
+    addTab();
+  }
+  if (e.key === 'Escape') {
+    closeModal();
+    hideContextMenu();
+  }
+});
+
+// ========== INIT ==========
+function init() {
+  initTheme();
+  initMenuActions();
+  renderMenuBar();
+  renderToolbar();
+  renderConnectionList();
+  renderObjectTree();
+  renderTabs();
+  updateStatusBar();
+  initSplitter();
+
+  // Set initial data
+  state.currentData = [...users];
+}
+
+init();
+</script>
+</body>
+</html>

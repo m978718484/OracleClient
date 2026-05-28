@@ -1,12 +1,37 @@
 # OracleClient
 
-> 一个面向 Oracle 场景的原生桌面数据库客户端。  
-> Built with MewUI, designed for fast query workflows and a cleaner desktop experience.
+> 面向 Oracle 工作流的原生桌面客户端。  
+> 为更快的连接、更直接的查询反馈、更现代的桌面体验而构建。
 
-![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-4f46e5)
-![dotnet](https://img.shields.io/badge/.NET-9.0-7c3aed)
-![ui](https://img.shields.io/badge/UI-MewUI-0f766e)
-![database](https://img.shields.io/badge/Database-Oracle-c2410c)
+**一个更轻、更快、更聚焦 Oracle 的桌面数据库工作台。**
+
+[![下载最新版本](https://img.shields.io/badge/Download-Latest%20Release-2563eb?style=for-the-badge)](../../releases/latest)
+[![查看全部版本](https://img.shields.io/badge/GitHub-All%20Releases-111827?style=for-the-badge)](../../releases)
+
+**支持平台**
+
+![platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-4f46e5)
+
+**最新发布**
+
+[![release](https://img.shields.io/badge/Release-Ready%20for%20Download-111827?style=flat-square)](../../releases/latest)
+
+**AOT**
+
+![aot](https://img.shields.io/badge/AOT-.NET%209%20PublishAot-7c3aed?style=flat-square)
+
+**Oracle**
+
+![oracle](https://img.shields.io/badge/Oracle-ManagedDataAccess-c2410c?style=flat-square)
+
+## 下载说明
+
+把这里当作仓库首页的快速下载区即可：
+
+- 想直接体验项目：进入 [下载最新版本](../../releases/latest)
+- 想查看历史版本或不同平台资产：进入 [全部 Release](../../releases)
+- 下载后想校验完整性：在最新 Release 中同时获取 `SHA256SUMS.txt`
+- 当前发布资产按平台分别打包，选择与你系统对应的 `win-x64`、`linux-x64` 或 `osx-arm64` 文件即可
 
 ![主界面](assets/images/main.png)
 

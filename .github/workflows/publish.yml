@@ -7,6 +7,14 @@ on:
         description: 创建 GitHub Release
         type: boolean
         default: false
+      tag_name:
+        description: Release 标签，例如 v1.0.0（create_release=true 时必填）
+        type: string
+        default: ""
+      release_name:
+        description: Release 标题（可选，默认使用 OracleClient <tag_name>）
+        type: string
+        default: ""
 
 jobs:
   build:
@@ -44,16 +52,80 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
-      - name: Organize artifacts
+      - name: Resolve release metadata
+        id: meta
         shell: bash
         run: |
+          set -euo pipefail
+          VERSION="${{ inputs.tag_name }}"
+          VERSION="${VERSION#refs/tags/}"
+          if [[ -z "$VERSION" ]]; then
+            echo "tag_name is required when create_release=true" >&2
+            exit 1
+          fi
+
+          RELEASE_NAME="${{ inputs.release_name }}"
+          if [[ -z "$RELEASE_NAME" ]]; then
+            RELEASE_NAME="OracleClient ${VERSION}"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Package release assets
+        shell: bash
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
           mkdir -p release-assets
+
           for dir in OracleClient-*/; do
+            [[ -d "$dir" ]] || continue
             dir=${dir%/}
             rid=${dir#OracleClient-}
-            find "$dir" -type f -exec cp {} "release-assets/OracleClient-${rid}$([[ $rid == win-* ]] && echo '.exe')" \;
+
+            if [[ "$rid" == linux-* ]]; then
+              tar -C "$dir" -czf "release-assets/OracleClient-${VERSION}-${rid}.tar.gz" .
+            else
+              (
+                cd "$dir"
+                zip -qr "../release-assets/OracleClient-${VERSION}-${rid}.zip" .
+              )
+            fi
           done
+
+          (
+            cd release-assets
+            sha256sum * > SHA256SUMS.txt
+          )
+
+      - name: Generate release notes
+        shell: bash
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          cat > release-notes.md <<EOF
+          ## 下载
+
+          - Windows: \`OracleClient-${VERSION}-win-x64.zip\`
+          - Linux: \`OracleClient-${VERSION}-linux-x64.tar.gz\`
+          - macOS: \`OracleClient-${VERSION}-osx-arm64.zip\`
+
+          ## 校验
+
+          - 已附带 \`SHA256SUMS.txt\`
+          - 下载后可使用该文件验证发布资产完整性
+
+          ## 说明
+
+          - 每个平台均提供完整 publish 目录的归档文件
+          - 请按你的操作系统下载对应文件
+          EOF
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.meta.outputs.version }}
+          name: ${{ steps.meta.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
           files: release-assets/*
-          generate_release_notes: true
+          body_path: release-notes.md
