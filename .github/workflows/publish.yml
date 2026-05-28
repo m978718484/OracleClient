@@ -85,11 +85,18 @@ jobs:
             rid=${dir#OracleClient-}
 
             if [[ "$rid" == linux-* ]]; then
-              tar -C "$dir" -czf "release-assets/OracleClient-${VERSION}-${rid}.tar.gz" .
+              tar \
+                --exclude='*.pdb' \
+                --exclude='*.dbg' \
+                --exclude='*.dSYM' \
+                --exclude='*.dSYM/*' \
+                -C "$dir" \
+                -czf "release-assets/OracleClient-${VERSION}-${rid}.tar.gz" .
             else
               (
                 cd "$dir"
-                zip -qr "../release-assets/OracleClient-${VERSION}-${rid}.zip" .
+                zip -qr "../release-assets/OracleClient-${VERSION}-${rid}.zip" . \
+                  -x '*.pdb' '*.dbg' '*.dSYM/*'
               )
             fi
           done
