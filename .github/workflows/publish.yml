@@ -31,10 +31,6 @@ jobs:
       - run: dotnet restore
       - run: dotnet build -c Release --no-restore
       - run: dotnet publish -r ${{ matrix.rid }} -c Release --no-restore
-      - run: dotnet publish OracleWorker -r ${{ matrix.rid }} -c Release --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true
-      - shell: bash
-        run: |
-          cp OracleWorker/bin/Release/net9.0/${{ matrix.rid }}/publish/OracleWorker${{ matrix.suffix }} bin/Release/net9.0/${{ matrix.rid }}/publish/
       - uses: actions/upload-artifact@v4
         with:
           name: OracleClient-${{ matrix.rid }}
