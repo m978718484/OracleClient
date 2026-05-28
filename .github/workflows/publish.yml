@@ -8,7 +8,7 @@ on:
         type: boolean
         default: false
       tag_name:
-        description: Release 标签，例如 v1.0.0（create_release=true 时必填）
+        description: Release 标签，例如 v1.0.0（留空时自动生成预览版本号）
         type: string
         default: ""
       release_name:
@@ -60,8 +60,7 @@ jobs:
           VERSION="${{ inputs.tag_name }}"
           VERSION="${VERSION#refs/tags/}"
           if [[ -z "$VERSION" ]]; then
-            echo "tag_name is required when create_release=true" >&2
-            exit 1
+            VERSION="v0.0.0-preview.${GITHUB_RUN_NUMBER}"
           fi
 
           RELEASE_NAME="${{ inputs.release_name }}"
