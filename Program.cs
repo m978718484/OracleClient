@@ -35,6 +35,9 @@ var stopwatch = Stopwatch.StartNew();
 Startup();
 
 Window window = null!;
+IconSource appIcon;
+using (var rs = typeof(Program).Assembly.GetManifestResourceStream("OracleClient.assets.icon.appicon.ico")!)
+    appIcon = IconSource.FromStream(rs);
 
 // ── 应用状态 ─────────────────────────────────────────
 var isDarkMode          = new ObservableValue<bool>(true);
@@ -69,6 +72,7 @@ Application
     .UseAccent(Accent.Blue)
     .BuildMainWindow(() =>
         new Window()
+            .Icon(appIcon)
             .Resizable(1280, 800, minWidth: 900, minHeight: 600)
             .StartCenterScreen()
             .OnBuild(w => w
